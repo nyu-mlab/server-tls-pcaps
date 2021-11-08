@@ -69,6 +69,7 @@ def get_pcap_using_dns(arg_tuple):
             if os.path.getsize(existing_pcap_file) >= 2000:
                 # Already scraped and likely contains server cert, so ignore.
                 print(f'Skipping pcap for {hostname}:{port}')
+                return
             
     # Force TLS 1.2
     context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
