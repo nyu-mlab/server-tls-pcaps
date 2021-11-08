@@ -58,11 +58,18 @@ def get_pcap_using_dns(arg_tuple):
     pcap_path = os.path.join(output_pcap_folder, pcap_path)
 
     # Read from cache
-    if os.path.isfile(pcap_path):
-        if os.path.getsize(pcap_path) >= 2000:
-            # Already scraped and likely contains server cert, so ignore.
-            return
-
+    for existing_pcap_file in os.listdir(output_pcap_folder):
+        try:
+            # Match by port and hostname only, as the IP could change in the 2nd scrape
+            (_, existing_port, existing_hostname) = existing_pcap_file.replace('.pcap', '').split('-')
+        except:
+            continue
+        if existing_port == str(port) and existing_hostname == hostname:
+            existing_pcap_file = os.path.join(output_pcap_folder, existing_pcap_file)
+            if os.path.getsize(existing_pcap_file) >= 2000:
+                # Already scraped and likely contains server cert, so ignore.
+                print(f'Skipping pcap for {hostname}:{port}')
+            
     # Force TLS 1.2
     context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
     source_port = random.randint(10000, 64000)
