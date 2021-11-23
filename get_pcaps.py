@@ -21,12 +21,12 @@ def main():
         print('Wrong parameters. See README.')
         return
 
-    subprocess.call(['mkdir', '-p', output_pcap_folder])
+    mkdir(output_pcap_folder)
 
     print('Reading input data...')
 
     # A list of (port, hostname, output_pcap_folder)
-    input_list = []
+    input_set = set()
     for filename in os.listdir(input_folder):
         filename = os.path.join(input_folder, filename)
         with open(filename) as fp:
@@ -34,12 +34,14 @@ def main():
             # depending on our geolocation
             for (_, port, hostname) in json.load(fp):
                 if hostname:
-                    input_list += [(port, hostname, output_pcap_folder)]
+                    input_set.add((port, hostname, output_pcap_folder))
 
     print('Scraping...')
 
-    for _ in range(3):
+    for _ in range(20):
         with multiprocessing.Pool(PARALELL_COUNT) as pool:
+            input_list = list(input_set)
+            random.shuffle(input_list)
             pool.map(get_pcap_using_dns, input_list)
 
 
@@ -54,26 +56,32 @@ def get_pcap_using_dns(arg_tuple):
     except Exception:
         return
 
-    pcap_path = f'{new_ip}-{port}-{hostname}.pcap'
-    pcap_path = os.path.join(output_pcap_folder, pcap_path)
+    # Each hostname will have its own directory
+    pcap_dir = os.path.join(output_pcap_folder, hostname)
+    mkdir(pcap_dir)
 
-    # Read from cache
-    for existing_pcap_file in os.listdir(output_pcap_folder):
-        try:
-            # Match by port and hostname only, as the IP could change in the 2nd scrape
-            (_, existing_port, existing_hostname) = existing_pcap_file.replace('.pcap', '').split('-')
-        except:
-            continue
-        if existing_port == str(port) and existing_hostname == hostname:
-            existing_pcap_file = os.path.join(output_pcap_folder, existing_pcap_file)
-            if os.path.getsize(existing_pcap_file) >= 2000:
-                # Already scraped and likely contains server cert, so ignore.
-                print(f'Skipping pcap for {hostname}:{port}')
-                return
+    # In this directory are pcap files captured at different times
+    current_ts = int(time.time())
+    pcap_filename = f'{current_ts}-{new_ip}-{port}-{hostname}.pcap'
+    pcap_path = os.path.join(pcap_dir, pcap_filename)
+
+    # # Read from cache
+    # for existing_pcap_file in os.listdir(output_pcap_folder):
+    #     try:
+    #         # Match by port and hostname only, as the IP could change in the 2nd scrape
+    #         (_, existing_port, existing_hostname) = existing_pcap_file.replace('.pcap', '').split('-')
+    #     except:
+    #         continue
+    #     if existing_port == str(port) and existing_hostname == hostname:
+    #         existing_pcap_file = os.path.join(output_pcap_folder, existing_pcap_file)
+    #         if os.path.getsize(existing_pcap_file) >= 2000:
+    #             # Already scraped and likely contains server cert, so ignore.
+    #             print(f'Skipping pcap for {hostname}:{port}')
+    #             return
             
     # Force TLS 1.2
     context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-    source_port = random.randint(10000, 64000)
+    source_port = random.randint(40000, 65000)
 
     # Start tcpdump
     proc = subprocess.Popen([
@@ -87,7 +95,7 @@ def get_pcap_using_dns(arg_tuple):
 
     # TLS Connection
     try:
-        with socket.create_connection((new_ip, 443), timeout=15, source_address=('', source_port)) as sock:
+        with socket.create_connection((new_ip, 443), timeout=20, source_address=('', source_port)) as sock:
             with context.wrap_socket(sock, server_hostname=hostname) as ssock:
                 ssock.getpeercert()
     except Exception:
@@ -95,6 +103,11 @@ def get_pcap_using_dns(arg_tuple):
     finally:
         time.sleep(2)
         proc.terminate()
+
+
+def mkdir(path):
+
+    subprocess.call(['mkdir', '-p', path])
 
 
 if __name__ == '__main__':
