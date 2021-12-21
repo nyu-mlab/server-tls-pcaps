@@ -9,7 +9,7 @@ import sys
 import time
 
 
-PARALELL_COUNT = 20
+PARALELL_COUNT = 15
 
 
 def main():
@@ -93,17 +93,17 @@ def get_pcap_using_dns(arg_tuple):
         f'port {source_port} and host {new_ip}'
     ])
 
-    time.sleep(2)
+    time.sleep(3)
 
     # TLS Connection
     try:
-        with socket.create_connection((new_ip, 443), timeout=20, source_address=('', source_port)) as sock:
+        with socket.create_connection((new_ip, 443), timeout=30, source_address=('', source_port)) as sock:
             with context.wrap_socket(sock, server_hostname=hostname) as ssock:
                 ssock.getpeercert()
     except Exception:
         return
     finally:
-        time.sleep(2)
+        time.sleep(3)
         proc.terminate()
 
 
