@@ -15,27 +15,40 @@ PARALELL_COUNT = 15
 def main():
 
     try:
-        input_folder = sys.argv[1]
+        input_file = sys.argv[1]
         output_pcap_folder = sys.argv[2]
     except IndexError:
         print('Wrong parameters. See README.')
         return
 
+    if os.path.isdir(output_pcap_folder):
+        print('Directory already exists. Aborted.')
+        return
+        
     mkdir(output_pcap_folder)
 
     print('Reading input data...')
 
     # A list of (port, hostname, output_pcap_folder)
     input_set = set()
-    for filename in os.listdir(input_folder):
-        if filename.endswith('.json'):
-            filename = os.path.join(input_folder, filename)
-            with open(filename) as fp:
-                # We ignore the IP address below as we want to get the latest IP
-                # depending on our geolocation
-                for (_, port, hostname) in json.load(fp):
-                    if hostname:
-                        input_set.add((port, hostname, output_pcap_folder))
+    if input_file.endswith('.json'):            
+        with open(input_file) as fp:
+            # We ignore the IP address below as we want to get the latest IP
+            # depending on our geolocation
+            for (_, port, hostname) in json.load(fp):
+                if hostname:
+                    input_set.add((port, hostname, output_pcap_folder))
+    if input_file.endswith('.csv'):
+        with open(input_file) as fp:
+            # Each line is a hostname
+            for line in fp:
+                hostname = line.strip()
+                if '.' in hostname:
+                    input_set.add(('443', hostname, output_pcap_folder))
+    
+    if len(input_set) == 0:
+        print('No hostnames found. Aborted.')
+        return
 
     print('Scraping...')
 
