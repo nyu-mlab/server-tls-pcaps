@@ -28,15 +28,14 @@ def main():
     # A list of (port, hostname, output_pcap_folder)
     input_set = set()
     for filename in os.listdir(input_folder):
-        if not filename.endswith('.json'):
-            continue
-        filename = os.path.join(input_folder, filename)
-        with open(filename) as fp:
-            # We ignore the IP address below as we want to get the latest IP
-            # depending on our geolocation
-            for (_, port, hostname) in json.load(fp):
-                if hostname:
-                    input_set.add((port, hostname, output_pcap_folder))
+        if filename.endswith('.json'):
+            filename = os.path.join(input_folder, filename)
+            with open(filename) as fp:
+                # We ignore the IP address below as we want to get the latest IP
+                # depending on our geolocation
+                for (_, port, hostname) in json.load(fp):
+                    if hostname:
+                        input_set.add((port, hostname, output_pcap_folder))
 
     print('Scraping...')
 
