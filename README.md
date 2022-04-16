@@ -9,6 +9,6 @@ Prerequisites:
 ```
 source env/bin/activate
 pip install -r requirements.txt
-python get_pcaps.py [input_folder] [output_pcap_folder]
+python get_pcaps.py [input_file] [output_pcap_folder]
 ```
 
